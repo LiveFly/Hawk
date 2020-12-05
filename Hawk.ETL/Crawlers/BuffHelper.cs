@@ -15,9 +15,14 @@ namespace Hawk.ETL.Crawlers
       
         private int maxBufferCount;
 
-        [LocalizedDisplayName("启动缓存")]
+        [LocalizedDisplayName("key_159")]
         public bool EnableBuffer { get; set; }
 
+
+        public void SetBuffSize(int size)
+        {
+            maxBufferCount = size;
+        }
         public BuffHelper (int size)
         {
             EnableBuffer = true;
@@ -62,7 +67,7 @@ namespace Hawk.ETL.Crawlers
         }
         public T Get(string item)
         {
-            if (EnableBuffer == false || bufferDictionary.Count >= maxBufferCount)
+            if (EnableBuffer == false )
                 return default(T);
             if (bufferDictionary.ContainsKey(item))
             {

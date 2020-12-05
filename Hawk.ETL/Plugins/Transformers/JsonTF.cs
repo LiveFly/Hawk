@@ -13,12 +13,14 @@ using Hawk.Core.Utils.MVVM;
 using Hawk.Core.Utils.Plugins;
 using Hawk.ETL.Crawlers;
 using Hawk.ETL.Interfaces;
+using Hawk.ETL.Managements;
 using Hawk.ETL.Process;
 using HtmlAgilityPack;
+using Jayrock.Json.Conversion;
 
 namespace Hawk.ETL.Plugins.Transformers
 {
-    [XFrmWork("转换为Json", "从字符串转换为json（数组或字典类型）")]
+    [XFrmWork("JsonTF", "JsonTF_desc")]
     public class JsonTF : TransformerBase
     {
         private readonly JavaScriptSerializer serialier;
@@ -29,14 +31,18 @@ namespace Hawk.ETL.Plugins.Transformers
             serialier = new JavaScriptSerializer();
             ScriptWorkMode = ScriptWorkMode.NoTransform;
             OneOutput = false;
+            UseJSEngine = true;
         }
 
-        [LocalizedDisplayName("工作模式")]
-        [LocalizedDescription("文档列表：[{}],转换为多个数据行构成的列表；单文档：{},将结果的键值对附加到本行；不进行转换：直接将值放入到新列")]
+        [LocalizedDisplayName("key_188")]
+        [LocalizedDescription("etl_script_mode")]
         public ScriptWorkMode ScriptWorkMode { get; set; }
 
 
+        public bool UseJSEngine { get; set; }
 
+        [Browsable(false)]
+        public override string KeyConfig => ScriptWorkMode.ToString();
 
         private SmartCrawler selector;
         private bool crawlerEnabled = false;
@@ -53,10 +59,18 @@ namespace Hawk.ETL.Plugins.Transformers
             if (item == null || string.IsNullOrWhiteSpace(item.ToString()))
                 return null;
             
+            
             dynamic d = null;
             try
             {
-                d = serialier.DeserializeObject(item.ToString());
+                if (UseJSEngine)
+                {
+                    d = serialier.DeserializeObject(item.ToString());
+                }
+                else
+                {
+                    d = JsonConvert.Import(item.ToString());
+                }
             }
             catch (Exception ex)
             {
@@ -77,7 +91,7 @@ namespace Hawk.ETL.Plugins.Transformers
             return null;
         }
 
-        public override IEnumerable<IFreeDocument> TransformManyData(IEnumerable<IFreeDocument> datas)
+        public override IEnumerable<IFreeDocument> TransformManyData(IEnumerable<IFreeDocument> datas,AnalyzeItem analyzer)
         {
             foreach (var data in datas)
             {

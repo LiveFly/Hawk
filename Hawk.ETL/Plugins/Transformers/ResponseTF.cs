@@ -14,7 +14,7 @@ using HtmlAgilityPack;
 
 namespace Hawk.ETL.Plugins.Transformers
 {
-    [XFrmWork("获取请求响应", "使用网页采集器获取网页数据，得到响应字段的值并添加到对应的属性中")]
+    [XFrmWork("ResponseTF", "ResponseTF_desc")]
     public class ResponseTF : TransformerBase
     {
         protected readonly BuffHelper<HtmlDocument> buffHelper = new BuffHelper<HtmlDocument>(50);
@@ -25,14 +25,22 @@ namespace Hawk.ETL.Plugins.Transformers
         {
             CrawlerSelector = new TextEditSelector();
             CrawlerSelector.GetItems = this.GetAllCrawlerNames();
+            IsMultiYield = false;
         }
 
-        [LocalizedDisplayName("爬虫选择")]
-        [LocalizedDescription("填写采集器或模块的名称")]
+        [PropertyOrder(1)]
+        [LocalizedDisplayName("key_482")]
+        public string PostData { get; set; }
+
+        [PropertyOrder(2)]
+        [LocalizedDisplayName("key_118")]
+        public string Proxy { get; set; }
+        [LocalizedDisplayName("key_359")]
+        [LocalizedDescription("key_360")]
         public TextEditSelector CrawlerSelector { get; set; }
 
-        [LocalizedDisplayName("响应头")]
-        [LocalizedDescription("要获取的响应头的名称，多个之间用空格分割，不区分大小写")]
+        [LocalizedDisplayName("key_529")]
+        [LocalizedDescription("key_530")]
         public virtual string HeaderFilter { get; set; }
 
         [Browsable(false)]
@@ -59,23 +67,32 @@ namespace Hawk.ETL.Plugins.Transformers
         public override bool Init(IEnumerable<IFreeDocument> datas)
         {
             OneOutput = false;
-            Crawler = GetCrawler(CrawlerSelector.SelectItem);
+     
+            var name = CrawlerSelector.SelectItem;
+            name = AppHelper.Query(name, null);
+            Crawler = GetCrawler(name);
             if (string.IsNullOrEmpty(CrawlerSelector.SelectItem) && Crawler != null)
                 CrawlerSelector.SelectItem = Crawler.Name;
-            return Crawler != null && base.Init(datas);
+            IsMultiYield = false;
+            return  base.Init(datas);
         }
 
         public override
             object TransformData(IFreeDocument datas)
         {
+
+         
             var p = datas[Column];
+            var post = datas.Query(PostData);
             if (p == null)
                 return new List<FreeDocument>();
             var url = p.ToString();
-            WebHeaderCollection responseHeader;
-            HttpStatusCode code;
+            Crawler.SetCookie(Crawler.Http);
+            var response=  helper.GetHtml(Crawler.Http, url,post).Result;
 
-            var content = helper.GetHtml(Crawler.Http, out responseHeader, out code, url);
+            var content = response.Html;
+            var code = response.Code;
+            var responseHeader = response.ResponseHeaders;
             var keys = responseHeader.AllKeys;
             if (!string.IsNullOrEmpty(HeaderFilter))
             {
